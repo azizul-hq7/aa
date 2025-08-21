@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Weekly Timetable </title>
+    <style>
+      :root {
+        --bg: #111213;
+        --panel: #1e1f20;
+        --muted: #9aa0a6;
+        --accent: #ffffff;
+        --gap: 12px;
+        --cell-h: 64px;
+        --header-h: 56px;
+        --cta-grad: linear-gradient(90deg, #ff7a18, #af002d, #319197);
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto,
+          "Helvetica Neue", Arial;
+        background: linear-gradient(180deg, #0b0b0c 0%, #141516 100%);
+        color: var(--accent);
+        padding: 28px;
+      }
+
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+      h1 {
+        font-size: 30px;
+        margin: 0 0 18px 0;
+      }
+      .card {
+        background: var(--panel);
+        border-radius: 8px;
+        padding: 18px;
+        box-shadow: 0 6px 18px rgba(0, 0, 0, 0.6);
+      }
+
+      /* timetable */
+      table.timetable {
+        width: 100%;
+        border-collapse: collapse;
+        table-layout: fixed;
+      }
+      table.timetable thead th {
+        height: var(--header-h);
+        text-align: left;
+        padding: 12px;
+        font-weight: 600;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+        font-size: 13px;
+      }
+      table.timetable tbody td {
+        height: var(--cell-h);
+        padding: 12px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+        vertical-align: middle;
+        font-weight: 600;
+      }
+      .day-col {
+        width: 56px;
+        padding-left: 12px;
+        color: var(--muted);
+        font-weight: 900;
+        text-align: center;
+      }
+
+      /* course pills */
+      .course {
+        display: inline-block;
+        padding: 8px 10px;
+        border-radius: 8px;
+        font-weight: 700;
+        font-size: 13px;
+      }
+      .MA-201 {
+        background: linear-gradient(90deg, #7dd4fc, #60a5fa);
+        color: #000000da;
+      }
+      .MN-321 {
+        background: linear-gradient(90deg, #fde68a, #f59f0b);
+        color: #282828dc;
+      }
+      .MN-331 {
+        background: linear-gradient(90deg, #bbf7d0, #10b981);
+        color: #383838;
+      }
+      .MN-341 {
+        background: linear-gradient(90deg, #fbcfe8, #f43f5d);
+        color: #373737;
+      }
+      .CSE-332 {
+        background: linear-gradient(90deg, #d5ffe2, #7eeee1);
+        color: #474747;
+      }
+      /* lunch color (different, noticeable) */
+  
+      .fullname {
+        display: none;
+        font-size: 11px;
+        color: var(--muted);
+        font-weight: 500;
+        margin-top: 4px;
+      }
+
+      /* legend */
+      .legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 16px;
+      }
+      .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-weight: 600;
+        color: var(--muted);
+      }
+      .legend-sample {
+        width: 28px;
+        height: 20px;
+        border-radius: 6px;
+      }
+
+      /* mobile toolbar & view (hidden on desktop) */
+      .mobile-toolbar {
+        display: none;
+        margin-bottom: 12px;
+        gap: 10px;
+        align-items: center;
+      }
+      .mobile-select {
+        appearance: none;
+        border: 0;
+        padding: 12px 14px;
+        border-radius: 10px;
+        font-weight: 700;
+        cursor: pointer;
+        min-width: 160px;
+        background: var(--cta-grad);
+        color: #fff;
+        box-shadow: 0 6px 20px rgba(163, 36, 74, 0.18);
+        position: relative;
+      }
+      .mobile-select:focus {
+        outline: 3px solid rgba(255, 122, 24, 0.18);
+      }
+      .mobile-select[data-pulse="true"] {
+        animation: pulse 2200ms infinite;
+      }
+      @keyframes pulse {
+        0% {
+          transform: translateY(0);
+        }
+        50% {
+          transform: translateY(-2px);
+        }
+        100% {
+          transform: translateY(0);
+        }
+      }
+
+      .select-wrap {
+        position: relative;
+        display: inline-block;
+      }
+      .select-wrap::after {
+        content: "▾";
+        position: absolute;
+        right: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 14px;
+        opacity: 0.95;
+      }
+
+      .mobile-view {
+        display: none;
+        background: rgba(255, 255, 255, 0.02);
+        border-radius: 8px;
+        padding: 12px;
+      }
+      .slot {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        padding: 10px;
+        border-radius: 8px;
+        margin-bottom: 8px;
+      }
+      .slot .time {
+        width: 112px;
+        color: var(--muted);
+        font-weight: 700;
+      }
+      .slot .info {
+        flex: 1;
+      }
+      .slot .info .course {
+        font-weight: 800;
+      }
+      .slot.empty {
+        opacity: 0.6;
+      }
+
+      /* vertical header for lunch on desktop */
+      th.vertical {
+        width: 44px;
+        text-align: center;
+        padding: 6px;
+      }
+      th.vertical span {
+        display: inline-block;
+        transform: rotate(-90deg);
+        transform-origin: center;
+        white-space: nowrap;
+        font-weight: 700;
+      }
+
+      /* responsive rules */
+      @media (max-width: 720px) {
+        body {
+          padding: 12px;
+        }
+        table.timetable {
+          display: none;
+        } /* hide big table on mobile */
+        .container {
+          overflow: visible;
+        }
+        .mobile-toolbar {
+          display: flex;
+          justify-content: space-between;
+        }
+        .mobile-view {
+          display: block;
+        }
+        .legend {
+          display: none;
+        }
+        .slot .time {
+          width: 90px;
+        }
+        .day-col {
+          width: 40px;
+        }
+        .fullname {
+          display: none;
+        }
+      }
+
+      @media (min-width: 721px) {
+        .mobile-toolbar {
+          display: none;
+        }
+        .mobile-view {
+          display: none;
+        }
+      }
+
+      @media (max-width: 980px) {
+        .day-col {
+          width: 48px;
+        }
+        table.timetable thead th {
+          font-size: 12px;
+        }
+        .course {
+          font-size: 12px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Chintu Timetable</h1>
+      <div class="card">
+        <!-- Mobile toolbar: shows only on small devices -->
+        <div class="mobile-toolbar" aria-hidden="false">
+          <div style="display: flex; flex-direction: column">
+            <label
+              for="day-select"
+              style="
+                font-size: 12px;
+                color: var(--muted);
+                font-weight: 700;
+                margin-bottom: 6px;
+              "
+              >Select day</label
+            >
+            <div class="select-wrap">
+              <select
+                id="day-select"
+                class="mobile-select"
+                aria-label="Select day to view schedule"
+                data-pulse="true"
+              >
+                <option value="Monday">Monday</option>
+                <option value="Tuesday">Tuesday</option>
+                <option value="Wednesday">Wednesday</option>
+                <option value="Thursday">Thursday</option>
+                <option value="Friday">Friday</option>
+              </select>
+            </div>
+          </div>
+          <div
+            style="
+              display: flex;
+              flex-direction: column;
+              justify-content: center;
+              align-items: flex-end;
+            "
+          >
+            <div style="font-size: 12px; color: var(--muted); font-weight: 700">
+              Today's schedule
+            </div>
+            <div
+              id="mobile-sub"
+              style="font-size: 14px; font-weight: 800; color: var(--accent)"
+            ></div>
+          </div>
+        </div>
+
+        <!-- Mobile view container: populated by JS -->
+        <div id="mobile-view" class="mobile-view" aria-live="polite"></div>
+
+        <!-- Original table (desktop & larger tablets) -->
+        <table class="timetable" role="table" aria-label="Weekly timetable">
+          <thead>
+            <tr>
+              <th class="day-col">Day</th>
+              <th>08:00–8:55</th>
+              <th>09:00–9:55</th>
+              <th>10:00–10:55</th>
+              <th>11:00–11:55</th>
+              <!-- 12:00–12:55 added as lunch -->
+              <th>13:30–14:25</th>
+              <th>14:30–15:25</th>
+              <th>15:30–16:25</th>
+              <th>16:30–17:25</th>
+              <th>17:30–18:25</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr data-day="Monday">
+              <td class="day-col" aria-label="Monday" title="Monday">L</td>
+              <td></td>
+              <td>
+                <span class="course MA-201"
+                  >MA-201<span class="fullname"
+                    >Numerical Techniques</span
+                  ></span
+                >
+              </td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+            </tr>
+
+            <tr data-day="Tuesday">
+              <td class="day-col" aria-label="Tuesday" title="Tuesday">U</td>
+              <td>
+                <span class="course MN-341"
+                  >MN-341<span class="fullname"
+                    >Advanced Mine Ventilation (DE)</span
+                  ></span
+                >
+              </td>
+              <td>
+                <span class="course MN-321"
+                  >MN-321<span class="fullname">Surface Mining</span></span
+                >
+              </td>
+              <td>
+                <span class="course MN-331"
+                  >MN-331<span class="fullname">Ground Control</span></span
+                >
+              </td>
+              <td>
+                <span class="course CSE-332"
+                  >CSE-332<span class="fullname"
+                    >Ubiquitous Computing (OE)</span
+                  ></span
+                >
+              </td>
+              <td></td>
+              <td></td>
+              <td>
+                <span class="course CSE-332"
+                  >CSE (lab)<span class="fullname"
+                    >Ubiquitous Computing lab</span
+                  ></span
+                >
+              </td>
+              <td>
+                <span class="course CSE-332"
+                  >CSE (lab)<span class="fullname"
+                    >Ubiquitous Computing lab</span
+                  ></span
+                >
+              </td>
+              <td></td>
+            </tr>
+
+            <tr data-day="Wednesday">
+              <td class="day-col" aria-label="Wednesday" title="Wednesday">
+                N
+              </td>
+              <td>
+                <span class="course MN-341"
+                  >MN-341<span class="fullname"
+                    >Advanced Mine Ventilation (DE)</span
+                  ></span
+                >
+              </td>
+              <td>
+                <span class="course MN-321"
+                  >MN-321<span class="fullname">Surface Mining</span></span
+                >
+              </td>
+              <td>
+                <span class="course MN-331"
+                  >MN-331<span class="fullname">Ground Control</span></span
+                >
+              </td>
+              <td>
+                <span class="course CSE-332"
+                  >CSE-332<span class="fullname"
+                    >Ubiquitous Computing (OE)</span
+                  ></span
+                >
+              </td>
+
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+            </tr>
+
+            <tr data-day="Thursday">
+              <td class="day-col" aria-label="Thursday" title="Thursday">C</td>
+              <td></td>
+              <td>
+                <span class="course MA-201"
+                  >MA-201<span class="fullname"
+                    >Numerical Techniques</span
+                  ></span
+                >
+              </td>
+              <td></td>
+              <td></td>
+              <td>
+                <span class="course MN-321"
+                  >MN-321<span class="fullname">Surface Mining</span></span
+                >
+              </td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td>
+                <span class="course MA-201"
+                  >MA[ Tut ]<span class="fullname"
+                    >Numerical Techniques — Tutorial</span
+                  ></span
+                >
+              </td>
+            </tr>
+
+            <tr data-day="Friday">
+              <td class="day-col" aria-label="Friday" title="Friday">H</td>
+              <td>
+                <span class="course MN-341"
+                  >MN-341<span class="fullname"
+                    >Advanced Mine Ventilation (DE)</span
+                  ></span
+                >
+              </td>
+              <td></td>
+              <td>
+                <span class="course MN-331"
+                  >MN-331<span class="fullname">Ground Control</span></span
+                >
+              </td>
+              <td>
+                <span class="course CSE-332"
+                  >CSE-332<span class="fullname"
+                    >Ubiquitous Computing (OE)</span
+                  ></span
+                >
+              </td>
+
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="legend" aria-hidden="false">
+          <div style="flex-basis: 100%"></div>
+          <div class="legend-item">
+            <span class="legend-sample MA-201"></span> MA-201 — Numerical
+            Techniques
+          </div>
+          <div class="legend-item">
+            <span class="legend-sample MN-321"></span> MN-321 — Surface Mining
+          </div>
+          <div class="legend-item">
+            <span class="legend-sample MN-331"></span> MN-331 — Ground Control
+          </div>
+          <div class="legend-item">
+            <span class="legend-sample MN-341"></span> MN-341 — Advanced Mine
+            Ventilation (DE)
+          </div>
+          <div class="legend-item">
+            <span class="legend-sample CSE-332"></span> CSE-332 — Ubiquitous
+            Computing (OE)
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      (function () {
+        const table = document.querySelector(".timetable");
+        const headerCells = Array.from(table.querySelectorAll("thead th"))
+          .slice(1)
+          .map((th) => th.textContent.trim());
+        const rows = Array.from(table.querySelectorAll("tbody tr"));
+        const daySelect = document.getElementById("day-select");
+        const mobileView = document.getElementById("mobile-view");
+        const mobileSub = document.getElementById("mobile-sub");
+
+        function buildViewFor(dayName) {
+          const row = rows.find((r) => r.dataset.day === dayName);
+          if (!row) return;
+          const cells = Array.from(row.querySelectorAll("td")).slice(1);
+          mobileView.innerHTML = "";
+          let hasAnything = false;
+          cells.forEach((cell, idx) => {
+            const time = headerCells[idx] || "";
+            const cellClone = cell.cloneNode(true);
+            const courseEl = cellClone.querySelector(".course");
+            const text = cellClone.textContent.trim();
+            const slot = document.createElement("div");
+            slot.className = "slot" + (text === "" ? " empty" : "");
+            const t = document.createElement("div");
+            t.className = "time";
+            t.textContent = time;
+            const info = document.createElement("div");
+            info.className = "info";
+            if (courseEl) {
+              // For mobile keep things simple: show course short name or "Lunch"
+              const short = document.createElement("div");
+              short.className = "course";
+              if (courseEl.classList.contains("LUNCH")) {
+                short.className = "course LUNCH";
+                short.textContent = "Lunch";
+              } else {
+                // only show the short code (like MA-201) on mobile
+                const txt = courseEl.childNodes[0]
+                  ? courseEl.childNodes[0].textContent
+                  : courseEl.textContent;
+                short.textContent = txt.trim();
+                // copy class for color
+                if (courseEl.classList.contains("MA-201"))
+                  short.classList.add("MA-201");
+                if (courseEl.classList.contains("MN-321"))
+                  short.classList.add("MN-321");
+                if (courseEl.classList.contains("MN-331"))
+                  short.classList.add("MN-331");
+                if (courseEl.classList.contains("MN-341"))
+                  short.classList.add("MN-341");
+                if (courseEl.classList.contains("CSE-332"))
+                  short.classList.add("CSE-332");
+              }
+              info.appendChild(short);
+              // add a tiny descriptor for accessibility
+              const small = document.createElement("div");
+              small.className = "fullname";
+              small.textContent = courseEl.querySelector(".fullname")
+                ? courseEl.querySelector(".fullname").textContent
+                : "";
+              info.appendChild(small);
+              hasAnything = true;
+            } else {
+              const free = document.createElement("div");
+              free.textContent = text === "" ? "Free" : text;
+              info.appendChild(free);
+            }
+            slot.appendChild(t);
+            slot.appendChild(info);
+            mobileView.appendChild(slot);
+          });
+          mobileSub.textContent = dayName;
+          const select = document.getElementById("day-select");
+          select.dataset.pulse = hasAnything ? "false" : "true";
+        }
+
+        daySelect.addEventListener("change", (e) =>
+          buildViewFor(e.target.value)
+        );
+
+        const todayIdx = new Date().getDay();
+        const mapping = {
+          1: "Monday",
+          2: "Tuesday",
+          3: "Wednesday",
+          4: "Thursday",
+          5: "Friday",
+        };
+        const defaultDay = mapping[todayIdx] || "Monday";
+        daySelect.value = defaultDay;
+        buildViewFor(defaultDay);
+
+        daySelect.addEventListener("keydown", (e) => {
+          const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
+          const idx = days.indexOf(daySelect.value);
+          if (e.key === "ArrowRight" || e.key === "ArrowDown") {
+            daySelect.value = days[(idx + 1) % days.length];
+            daySelect.dispatchEvent(new Event("change"));
+          } else if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
+            daySelect.value = days[(idx - 1 + days.length) % days.length];
+            daySelect.dispatchEvent(new Event("change"));
+          }
+        });
+
+        const observer = new MutationObserver(() => {
+          if (window.innerWidth <= 720) buildViewFor(daySelect.value);
+        });
+        rows.forEach((r) =>
+          observer.observe(r, { childList: true, subtree: true })
+        );
+      })();
+    </script>
+  </body>
+</html>
